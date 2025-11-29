@@ -12,7 +12,7 @@ class ImageBatchConverter:
     def __init__(self, root):
         self.root = root
         self.root.title("🔄 多格式图片批量转换器 for dingla")
-        self.root.geometry("800x900")
+        self.root.geometry("1020x1100")
         
         # 存储文件路径和输出目录
         self.input_paths = []
@@ -39,7 +39,7 @@ class ImageBatchConverter:
         # 标题
         title_label = ttk.Label(main_frame, text="🔄 多格式图片批量转换器", bootstyle=PRIMARY,
                                 font=("Helvetica", 16, "bold"))
-        title_label.pack(pady=(0, 20))
+        title_label.pack(pady=(0, 15))
         
         # 选择文件/文件夹部分
         selection_frame = ttk.Labelframe(main_frame, text="1.选择输入", bootstyle=SUCCESS, padding=10)
@@ -51,17 +51,17 @@ class ImageBatchConverter:
         
         # 文件选择按钮
         file_button = ttk.Button(button_frame, text="🎬 选择图片文件", bootstyle=INFO,
-                                command=self.select_files, width=15)
+                                command=self.select_files, width=20)
         file_button.pack(side=LEFT, padx=10)
         
         # 文件夹选择按钮
         folder_button = ttk.Button(button_frame, text="📂 选择文件夹", 
-                                command=self.select_folder, width=15)
+                                command=self.select_folder, width=20)
         folder_button.pack(side=LEFT, padx=10)
         
         # 清除选择按钮
         clear_button = ttk.Button(button_frame, bootstyle=SECONDARY, text="🧹 清除选择", 
-                                command=self.clear_selection, width=15)
+                                command=self.clear_selection, width=20)
         clear_button.pack(side=LEFT, padx=10)        
 
         
@@ -129,8 +129,8 @@ class ImageBatchConverter:
         rename_combo.pack(side=LEFT,padx=5)
 
         output_dir_button = ttk.Button(rename_frame, text="🔍 浏览", bootstyle=SUCCESS, 
-                                    command=self.select_output_dir, width=15)
-        output_dir_button.pack(side=RIGHT)
+                                    command=self.select_output_dir, width=20)
+        output_dir_button.pack(side=RIGHT, padx=(0,10), pady=(0, 10))
         
         # 转换选项
         options_frame = ttk.Labelframe(main_frame, text="3.转换", bootstyle=PRIMARY, padding=10)
@@ -180,17 +180,17 @@ class ImageBatchConverter:
         
         # 打开输出目录按钮
         open_dir_button = ttk.Button(command_frame, text="📂 打开输出目录", 
-                                    command=self.open_output_dir, bootstyle=PRIMARY, width=15)
+                                    command=self.open_output_dir, bootstyle=PRIMARY, width=20)
         open_dir_button.pack(side=LEFT, padx=10)
         
         # 开始转换按钮
         self.convert_button = ttk.Button(command_frame, text="🍭 开始转换", 
-                                        command=self.start_conversion, bootstyle=WARNING, width=15)
+                                        command=self.start_conversion, bootstyle=WARNING, width=20)
         self.convert_button.pack(side=LEFT, padx=10)
         
         # 清空日志按钮
         clear_log_button = ttk.Button(command_frame, text="🧹 清空日志", 
-                                    command=self.clear_log, bootstyle=SECONDARY, width=15)
+                                    command=self.clear_log, bootstyle=SECONDARY, width=20)
         clear_log_button.pack(side=LEFT, padx=10)
         
         # 进度和日志
