@@ -12,7 +12,7 @@ import datetime
 class ImageBatchConverter:
     def __init__(self, root):
         self.root = root
-        self.root.title("🔄 多格式图片批量转换器 for dingla")
+        self.root.title(" 多格式图片批量转换器 for dingla")
         self.root.geometry("800x800")  # 调整窗口大小以容纳更多列
         
         # 存储文件路径和输出目录
@@ -26,6 +26,7 @@ class ImageBatchConverter:
         self.width_var = tk.StringVar()
         self.height_var = tk.StringVar()
         self.keep_aspect_var = tk.BooleanVar(value=True)
+        self.is_percent_unit = tk.BooleanVar(value=False)
         self.quality_var = tk.IntVar(value=90)
         self.rename_mode_var = tk.StringVar(value="自动重命名")
         
@@ -73,14 +74,14 @@ class ImageBatchConverter:
         command_frame.columnconfigure(2, weight=1)  
 
         open_dir_button = ttk.Button(command_frame, text="📂 打开输出目录", width=18,
-                                    command=self.open_output_dir, bootstyle=PRIMARY)
+                                    command=self.open_output_dir, bootstyle=WARNING)
         open_dir_button.grid(row=0, column=0, sticky="ew", padx=(5,10))
             
         self.convert_button = ttk.Button(command_frame, text="🍭 开始转换", width=18,
                                         command=self.start_conversion, bootstyle=SUCCESS)
         self.convert_button.grid(row=0, column=1, sticky="ew", padx=10)
         
-        clear_log_button = ttk.Button(command_frame, text="🧹 清空日志", width=9,
+        clear_log_button = ttk.Button(command_frame, text="🗑️ 清空日志", width=9,
                                     command=self.clear_log, bootstyle=SECONDARY)
         clear_log_button.grid(row=0, column=2, sticky="ew", padx=(10,15))
         
@@ -227,13 +228,21 @@ class ImageBatchConverter:
         size_subframe = ttk.Frame(size_frame)
         size_subframe.pack(side=LEFT, padx=(10, 0))
         
-        ttk.Label(size_subframe, text="宽度:").grid(row=0, column=0, padx=(0, 5), sticky="e")
+        ttk.Label(size_subframe, text="宽度:").pack(side=LEFT, padx=(10, 0))
         width_entry = ttk.Entry(size_subframe, textvariable=self.width_var, width=8)
-        width_entry.grid(row=0, column=1, padx=(0, 10))
+        width_entry.pack(side=LEFT, padx=(10, 0))
+        self.width_value_label = ttk.Label(size_subframe, text="px")
+        self.width_value_label.pack(side=LEFT, padx=(0, 5))
         
-        ttk.Label(size_subframe, text="高度:").grid(row=0, column=2, padx=(0, 5), sticky="e")
+        ttk.Label(size_subframe, text="高度:").pack(side=LEFT, padx=(10, 0))
         height_entry = ttk.Entry(size_subframe, textvariable=self.height_var, width=8)
-        height_entry.grid(row=0, column=3, padx=(0, 10))
+        height_entry.pack(side=LEFT, padx=(10, 0))
+        self.height_value_label = ttk.Label(size_subframe, text="px",width=3)
+        self.height_value_label.pack(side=LEFT, padx=(0, 5))
+
+        unit_check = ttk.Checkbutton(size_frame, text="百分比单位", 
+                                            variable=self.is_percent_unit,command=self.set_image_unit, bootstyle=INFO)
+        unit_check.pack(side=LEFT, padx=(20, 0))
         
         keep_aspect_check = ttk.Checkbutton(size_frame, text="保持宽高比", 
                                             variable=self.keep_aspect_var, bootstyle=INFO)
@@ -252,6 +261,15 @@ class ImageBatchConverter:
         self.quality_value_label.pack(side=RIGHT)
         
         quality_scale.configure(command=self.update_quality_label)
+
+    # 改变图片单位
+    def set_image_unit(self):
+        if self.is_percent_unit.get():
+            self.width_value_label.configure(text="% ")
+            self.height_value_label.configure(text="% ")
+        else:
+            self.width_value_label.configure(text="px")
+            self.height_value_label.configure(text="px")
         
 
     def get_file_metadata(self, path):
@@ -556,42 +574,97 @@ class ImageBatchConverter:
                     if hasattr(img, 'n_frames') and img.n_frames > 1:
                         self.log_message(f"[警告] {os.path.basename(input_path)} 是多页图像 (共 {img.n_frames} 页)，仅转换第一页")
                     
-                    # 转换为 RGB 模式（如果必要）
-                    if img.mode != 'RGB':
-                        img = img.convert('RGB')
+                    # 转换为 RGB 模式（如果必要，特别是对于 GIF/TIFF 等）
+                    img = img.convert('RGB')                           
                     
-                    # 调整尺寸（如果指定了尺寸）
+                    original_width, original_height = img.size
                     width_str = self.width_var.get().strip()
                     height_str = self.height_var.get().strip()
                     
-                    if width_str or height_str:
-                        original_width, original_height = img.size
+                    new_width = original_width
+                    new_height = original_height
+                    resize_needed = False
+
+                    # 1. 解析和计算目标尺寸 (基于百分比或像素)
+                    try:
+                        is_percent = self.is_percent_unit.get()
                         
-                        # 解析宽度和高度
-                        try:
-                            if width_str and height_str:
-                                new_width = int(width_str)
-                                new_height = int(height_str)
-                            elif width_str:
-                                new_width = int(width_str)
-                                new_height = int(original_height * (new_width / original_width))
-                            elif height_str:
-                                new_height = int(height_str)
-                                new_width = int(original_width * (new_height / original_height))
+                        target_w = None
+                        target_h = None
+                        # --- 解析输入 ---
+                        if width_str:
+                            val = int(width_str)
+                            if val > 0:
+                                if is_percent:  # 像素
+                                    target_w = int(original_width * (val / 100.0))
+                                else:
+                                    target_w = int(val)
+                            else: 
+                                raise ValueError("宽度像素值必须大于 0。")
+
+                                    
+                        if height_str:
+                            val = float(height_str)
+                            if val > 0:
+                                if is_percent: # 像素
+                                    target_h = int(original_height * (val / 100.0))
+                                else:
+                                    target_h = int(val)
+                            else: 
+                                raise ValueError("高度像素值必须大于 0。")
                             
-                            # 如果要求保持宽高比，调整为适应尺寸
+                        # --- 确定最终尺寸 (处理只输入了一个值的情况) ---
+                        if target_w is not None or target_h is not None:
+                            resize_needed = True
+
+                            # 保持宽高比逻辑 (优先级最高)
                             if self.keep_aspect_var.get():
-                                ratio = min(new_width / original_width, new_height / original_height)
-                                new_width = int(original_width * ratio)
-                                new_height = int(original_height * ratio)
+                                if target_w is not None and target_h is None:
+                                    # 只指定了宽度，按宽度计算高度
+                                    ratio = target_w / original_width
+                                    new_width = target_w
+                                    new_height = int(original_height * ratio)
+                                elif target_h is not None and target_w is None:
+                                    # 只指定了高度，按高度计算宽度
+                                    ratio = target_h / original_height
+                                    new_height = target_h
+                                    new_width = int(original_width * ratio)
+                                elif target_w is not None and target_h is not None:
+                                    # 两个都指定了，取最小的缩放比例来保证不超出任何一个限制
+                                    ratio_w = target_w / original_width
+                                    ratio_h = target_h / original_height
+                                    ratio = min(ratio_w, ratio_h)
+                                    
+                                    new_width = int(original_width * ratio)
+                                    new_height = int(original_height * ratio)
                             
-                            # 调整图像尺寸
-                            img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-                            
-                        except ValueError:
-                            self.log_message(f"[错误] 无效的尺寸设置 - {os.path.basename(input_path)}")
-                            failed_count += 1
-                            continue
+                            # 不保持宽高比 (或在保持宽高比后，如果两个都指定了，则按指定尺寸)
+                            else:
+                                if target_w is not None:
+                                    new_width = target_w
+                                if target_h is not None:
+                                    new_height = target_h
+                                    
+                    except Exception as e:
+                        self.log_message(f"[错误] 处理尺寸时发生未知错误 - {os.path.basename(input_path)}: {e}")
+                        failed_count += 1
+                        continue
+                    # 2. 调整尺寸
+                    if resize_needed and (new_width != original_width or new_height != original_height):
+                        # 确保尺寸大于0
+                        if new_width <= 0 or new_height <= 0:
+                            self.log_message(f"[警告] 计算的尺寸无效 (W:{new_width}, H:{new_height})，跳过缩放 - {os.path.basename(input_path)}")
+                        else:
+                            try:
+                                # 调整图像尺寸 (使用 LANCZOS 滤镜以获得高质量缩放)
+                                img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                                self.log_message(f"[信息] 成功缩放 {os.path.basename(input_path)} 到 {new_width}x{new_height}")
+                            except Exception as e:
+                                self.log_message(f"[错误] 无法调整图像尺寸 - {os.path.basename(input_path)}: {e}")
+                                failed_count += 1
+                                continue
+                    else:
+                        self.log_message(f"[信息] 未指定尺寸变化或尺寸保持不变 - {os.path.basename(input_path)}")
                     
                     # 生成输出文件名
                     base_name = os.path.splitext(os.path.basename(input_path))[0]
@@ -646,7 +719,10 @@ class ImageBatchConverter:
 
 def main():
     # 使用 ttkbootstrap 的 Window 作为根窗口
-    root = ttk.Window(themename="cosmo")
+    # root = ttk.Window(themename="cosmo")
+    # root = ttk.Window(themename="yeti")
+    root = ttk.Window(themename="flatly")
+    
     app = ImageBatchConverter(root)
     root.mainloop()
 
