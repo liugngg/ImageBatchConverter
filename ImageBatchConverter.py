@@ -139,7 +139,7 @@ class ImageBatchConverter:
         list_header_frame.pack(fill=X, pady=(0, 5))
         
         ttk.Label(list_header_frame, text="选择的文件:").pack(side=LEFT)
-        self.file_count_label = ttk.Label(list_header_frame, bootstyle=INFO, text="(0 个文件)")
+        self.file_count_label = ttk.Label(list_header_frame, bootstyle=WARNING, text="(0 个文件)")
         self.file_count_label.pack(side=LEFT, padx=(10, 0))
 
         # 格式过滤
@@ -241,7 +241,7 @@ class ImageBatchConverter:
         self.height_value_label.pack(side=LEFT, padx=(0, 5))
 
         unit_check = ttk.Checkbutton(size_frame, text="百分比单位", 
-                                            variable=self.is_percent_unit,command=self.set_image_unit, bootstyle=INFO)
+                                            variable=self.is_percent_unit,command=self.set_image_unit, bootstyle=SUCCESS)
         unit_check.pack(side=LEFT, padx=(20, 0))
         
         keep_aspect_check = ttk.Checkbutton(size_frame, text="保持宽高比", 
@@ -720,8 +720,8 @@ class ImageBatchConverter:
 def main():
     # 使用 ttkbootstrap 的 Window 作为根窗口
     # root = ttk.Window(themename="cosmo")
-    # root = ttk.Window(themename="yeti")
-    root = ttk.Window(themename="flatly")
+    root = ttk.Window(themename="yeti")
+    # root = ttk.Window(themename="flatly")
     
     app = ImageBatchConverter(root)
     root.mainloop()
