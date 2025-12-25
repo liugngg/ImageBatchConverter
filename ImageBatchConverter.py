@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox,font
 import os
 import threading
 from PIL import Image
@@ -12,8 +12,18 @@ import datetime
 class ImageBatchConverter:
     def __init__(self, root):
         self.root = root
+        # 设置窗口标题和初始大小
         self.root.title(" 多格式图片批量转换器 for dingla")
         self.root.geometry("800x800")  # 调整窗口大小以容纳更多列
+
+        # 设置 ttkbootstrap 主题
+        # 可以使用 "cosmo"、"yeti" 、"flatly" 等
+        self.Style = ttk.Style(theme="cosmo")
+        # 设置默认字体
+        default_font = font.nametofont("TkDefaultFont")
+        default_font.configure(family="Microsoft YaHei", size=10, weight="normal")
+
+
         
         # 存储文件路径和输出目录
         self.input_paths = []
@@ -58,8 +68,8 @@ class ImageBatchConverter:
         self.input_tab = ttk.Frame(self.notebook, padding=10)
         self.options_tab = ttk.Frame(self.notebook, padding=10)
         
-        self.notebook.add(self.input_tab, text="📁 输入设置")
-        self.notebook.add(self.options_tab, text="⚒️ 输出选项")
+        self.notebook.add(self.input_tab, text="输入设置")
+        self.notebook.add(self.options_tab, text="输出选项")
         
         # 创建各个标签页的内容
         self.create_input_tab(self.input_tab)
@@ -69,92 +79,79 @@ class ImageBatchConverter:
         # 命令框架
         command_frame = ttk.Frame(main_frame)
         command_frame.pack(fill=tk.X, pady=(0, 10))
-        for i in range(2):   
-            command_frame.columnconfigure(i, weight=2)
-        command_frame.columnconfigure(2, weight=1)  
 
-        open_dir_button = ttk.Button(command_frame, text="📂 打开输出目录", width=18,
-                                    command=self.open_output_dir, bootstyle=WARNING)
-        open_dir_button.grid(row=0, column=0, sticky="ew", padx=(5,10))
-            
-        self.convert_button = ttk.Button(command_frame, text="🍭 开始转换", width=18,
+        clear_log_button = ttk.Button(command_frame, text="🗑️清空日志", width=15,
+                                    command=self.clear_log, bootstyle=(WARNING))
+        clear_log_button.pack(side=LEFT, padx=(5,5),pady=(10,0))
+
+        self.convert_button = ttk.Button(command_frame, text="🍭开始转换", width=15,
                                         command=self.start_conversion, bootstyle=SUCCESS)
-        self.convert_button.grid(row=0, column=1, sticky="ew", padx=10)
-        
-        clear_log_button = ttk.Button(command_frame, text="🗑️ 清空日志", width=9,
-                                    command=self.clear_log, bootstyle=SECONDARY)
-        clear_log_button.grid(row=0, column=2, sticky="ew", padx=(10,15))
+        self.convert_button.pack(side=RIGHT, padx=(5,10),pady=(10,0))
+
+        open_dir_button = ttk.Button(command_frame, text="📂打开输出目录", width=15,
+                                    command=self.open_output_dir, bootstyle=(PRIMARY,LINK))
+        open_dir_button.pack(side=RIGHT, padx=(10,5),pady=(10,0))
         
         # 进度和日志框架 (保留在主框架中)
-        progress_frame = ttk.Labelframe(main_frame, text="进度与日志", bootstyle=INFO, padding=10)
+        progress_frame = ttk.Frame(main_frame, bootstyle=INFO)
         progress_frame.pack(fill=BOTH, expand=True, pady=(0, 0))
         
         # 日志文本框
         log_container = ttk.Frame(progress_frame)
         log_container.pack(fill=BOTH, expand=True)
         
-        self.log_text = ScrolledText(log_container, height=4, font=("Consolas", 9))
-        self.log_text.pack(side=LEFT, fill=BOTH, expand=True)
+        self.log_text = ScrolledText(log_container, height=4, font=("Consolas", 10))
+        self.log_text.pack(side=LEFT, fill=BOTH, expand=True, pady=0)
         
         # 状态栏 (保留在主框架中)
-        status_frame = ttk.Frame(self.root, padding=(10, 5))
+        status_frame = ttk.Frame(self.root)
         status_frame.pack(fill=X, side=BOTTOM)
-
-        self.status_label = ttk.Label(status_frame, text=f"就绪", anchor="w", bootstyle=INFO)
-        self.status_label.pack(side=LEFT, pady=(0, 0))
         
         self.progress_var = tk.DoubleVar()
         self.progress_bar = ttk.Progressbar(status_frame, variable=self.progress_var, maximum=100, bootstyle=SUCCESS)
-        self.progress_bar.pack(side=RIGHT, fill=tk.X, expand=True, padx=(5,0), pady=(0, 0))
+        self.progress_bar.pack(side=LEFT, fill=tk.X, expand=True, padx=10, pady=0)
+
+        self.status_label = ttk.Label(status_frame, text=f"就绪", anchor="w", bootstyle=INFO)
+        self.status_label.pack(side=RIGHT, pady=0,padx=10)
 
     def create_input_tab(self, parent):
         
         # 选择按钮框架
         button_frame = ttk.Frame(parent)
-        button_frame.pack(fill=tk.X, pady=(10, 10))
-        for i in range(2):   
-            button_frame.columnconfigure(i, weight=2)  
-        button_frame.columnconfigure(2, weight=1)  
+        button_frame.pack(fill=tk.X)
+
+        file_button = ttk.Button(button_frame, text="🎬 选择图片", bootstyle="primary-link",
+                                command=self.select_files)
+        file_button.pack(side=LEFT, padx=(5,5))
+        
+        folder_button = ttk.Button(button_frame, text="📂 选择目录", bootstyle="info-link",
+                                command=self.select_folder)
+        folder_button.pack(side=LEFT, padx=(5,5))
+
+        # 递归选项
+        self.recursive_var = tk.BooleanVar(value=True)
+        recursive_check = ttk.Checkbutton(button_frame, text="递归搜索", 
+                                        variable=self.recursive_var, bootstyle=INFO)
+        recursive_check.pack(side=LEFT, padx=10)
+
+
+        # 格式过滤
+        self.filter_var = tk.StringVar(value="所有图片")
+        self.filter_combo = ttk.Combobox(button_frame, textvariable=self.filter_var, bootstyle=PRIMARY,
+                                        values=["所有图片", "仅TIFF文件", "仅PNG文件", "仅JPEG文件", "仅BMP文件", "仅GIF文件", "仅WEBP文件"],
+                                        state="readonly", width=10)
+        self.filter_combo.pack(side=RIGHT, padx=5)      
+        ttk.Label(button_frame, text="格式过滤:").pack(side=RIGHT, padx=(15, 5))
 
         
-        file_button = ttk.Button(button_frame, text="🎬 选择图片", bootstyle=INFO,width=18,
-                                command=self.select_files)
-        file_button.grid(row=0, column=0, sticky="ew",padx=(0,10))
-        
-        folder_button = ttk.Button(button_frame, text="📂 选择目录", bootstyle=PRIMARY,width=18,
-                                command=self.select_folder)
-        folder_button.grid(row=0, column=1, sticky="ew", padx=(10,10))
-        
-        clear_button = ttk.Button(button_frame, text="🧹 清除选择",bootstyle=SECONDARY,width=9,
+        clear_button = ttk.Button(button_frame, text="🧹 清除选择",bootstyle="secondary-link",
                                 command=self.clear_selection)
-        clear_button.grid(row=0, column=2, sticky="ew",padx=(10,0))
+        clear_button.pack(side=RIGHT, padx=(5,5))
 
         
         # 过滤和文件列表部分
         list_frame = ttk.Frame(parent)
-        list_frame.pack(fill=BOTH, expand=True, pady=(10, 10))
-        
-        # 文件列表标签和计数
-        list_header_frame = ttk.Frame(list_frame)
-        list_header_frame.pack(fill=X, pady=(0, 5))
-        
-        ttk.Label(list_header_frame, text="选择的文件:").pack(side=LEFT)
-        self.file_count_label = ttk.Label(list_header_frame, bootstyle=WARNING, text="(0 个文件)")
-        self.file_count_label.pack(side=LEFT, padx=(10, 0))
-
-        # 格式过滤
-        self.filter_var = tk.StringVar(value="所有图片")
-        self.filter_combo = ttk.Combobox(list_header_frame, textvariable=self.filter_var, bootstyle=PRIMARY,
-                                        values=["所有图片", "仅TIFF文件", "仅PNG文件", "仅JPEG文件", "仅BMP文件", "仅GIF文件", "仅WEBP文件"],
-                                        state="readonly", width=10)
-        self.filter_combo.pack(side=RIGHT)      
-        ttk.Label(list_header_frame, text="格式过滤:").pack(side=RIGHT, padx=(20, 5))
-
-        # 递归选项
-        self.recursive_var = tk.BooleanVar(value=True)
-        recursive_check = ttk.Checkbutton(list_header_frame, text="递归搜索", 
-                                        variable=self.recursive_var, bootstyle=INFO)
-        recursive_check.pack(side=RIGHT, padx=10)
+        list_frame.pack(fill=BOTH, expand=True, pady=(5, 5))        
         
         # Treeview
         list_container = ttk.Frame(list_frame)
@@ -718,11 +715,7 @@ class ImageBatchConverter:
             messagebox.showinfo("完成", msg)
 
 def main():
-    # 使用 ttkbootstrap 的 Window 作为根窗口
-    # root = ttk.Window(themename="cosmo")
-    root = ttk.Window(themename="yeti")
-    # root = ttk.Window(themename="flatly")
-    
+    root = tk.Tk()
     app = ImageBatchConverter(root)
     root.mainloop()
 
